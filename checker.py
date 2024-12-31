@@ -61,6 +61,12 @@ if st.button("Verificar Tarjeta"):
                 country = 'No disponible'
                 card_type = 'Desconocido'
 
+            # Mostrar detalles de la tarjeta
+            st.write("#### Detalles de la Tarjeta:")
+            st.write(f"- **Banco Emisor**: {bank_name}")
+            st.write(f"- **País**: {country}")
+            st.write(f"- **Tipo de Tarjeta**: {card_type}")
+
             # Mapear el tipo de tarjeta a un valor aceptado por PayPal
             card_type_paypal = map_card_type(card_type)
             if card_type_paypal == "null":
@@ -94,9 +100,6 @@ if st.button("Verificar Tarjeta"):
 
                 if payment.create():
                     st.success("La tarjeta de crédito está aprobada.")
-                    st.write(f"- **Banco Emisor**: {bank_name}")
-                    st.write(f"- **País**: {country}")
-                    st.write(f"- **Tipo de Tarjeta**: {card_type}")
                 else:
                     error_message = payment.error.get('message', 'Error desconocido')
                     st.error("La tarjeta de crédito está declinada.")
