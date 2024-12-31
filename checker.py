@@ -12,8 +12,8 @@ def get_country_flag(country_code):
 # Configurar la API de PayPal
 paypalrestsdk.configure({
     "mode": "sandbox",  # Cambia a "live" para producción
-    "client_id": st.secrets["ARxIj7XJ7JV6gOB_7_wlLsQeNRn0nktL2oZbs21RtvzhwyAk_78e1ndc-8dgQ0bRUx5S5IaNYIq2VzlK"],
-    "client_secret": st.secrets["EFNo1iPGd8titwc-4DfTJ2RWj2---BYIarqLIsQJvKOIIVd4-5SkeRD0_YMvGzmLW5VjgdlloPtcTney"]
+    "client_id": st.secrets["PAYPAL_CLIENT_ID"],
+    "client_secret": st.secrets["PAYPAL_CLIENT_SECRET"]
 })
 
 st.title("Verificación de Tarjetas de Crédito")
