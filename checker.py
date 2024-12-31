@@ -78,6 +78,7 @@ if st.button("Verificar Tarjeta"):
             if bank_info:
                 bank_name = bank_info.get('bank', {}).get('name', 'Desconocido')
                 country = bank_info.get('country', 'Desconocido')
+                country_name = country.get('name', 'Desconocido')
                 card_type = bank_info.get('scheme', 'Desconocido').capitalize()
                 
                 # Mapear el tipo de tarjeta a un valor aceptado por PayPal
@@ -87,13 +88,13 @@ if st.button("Verificar Tarjeta"):
                     
             else:
                 bank_name = 'No disponible'
-                country = 'No disponible'
+                country_name = 'No disponible'
                 card_type = 'null'
                 card_type_paypal = 'null'
 
             # Mostrar los detalles de la tarjeta antes de la autorización
             st.write("#### Detalles de la Tarjeta:")
-            st.write(f"- **País**: {country}")
+            st.write(f"- **País**: {country_name}")
             st.write(f"- **Tipo**: {card_type if card_type_paypal != 'null' else 'null'}")
             st.write(f"- **Banco Emisor**: {bank_name}")
 
@@ -109,16 +110,7 @@ if st.button("Verificar Tarjeta"):
                                 "type": card_type_paypal,  # Usa el tipo de tarjeta mapeado
                                 "expire_month": expire_month,
                                 "expire_year": "20" + expire_year,
-                                "cvv2": cvv,
-                                "first_name": "John",
-                                "last_name": "Doe",
-                                "billing_address": {
-                                    "line1": "123 Main St",
-                                    "city": "San Jose",
-                                    "state": "CA",
-                                    "postal_code": "95131",
-                                    "country_code": country
-                                }
+                                "cvv2": cvv
                             }
                         }]
                     },
@@ -145,11 +137,8 @@ if st.button("Verificar Tarjeta"):
                     
                     change_button_to_green()
                 else:
-                    error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
-                    st.error(f"La tarjeta de crédito está declinada: {error_message}")
-                    st.error(f"Detalles del error: {payment.error}")
-
+                    st.error(f"La tarjeta de crédito está declinada.")
         except Exception as e:
-            st.error(f"Error al procesar la tarjeta de crédito: {str(e)}")
+            st.error("Error al procesar la tarjeta de crédito.")
     else:
-        st.warning("Por favor, complete todos los campos.")
+        st.warning("Por favor, complete todos los campos.")           
