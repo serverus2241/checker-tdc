@@ -76,9 +76,9 @@ if st.button("Verificar Tarjeta"):
             # Obtener información del banco emisor
             bank_info = get_bank_info(card_number)
             if bank_info:
-                bank_name = bank_info.get('bank', {}).get('name', 'Desconocido')
-                country = bank_info.get('country', 'Desconocido')
-                country_name = country.get('name', 'Desconocido')
+                bank_name = bank_info.get('bank', {}).get('name', 'No disponible')
+                country_info = bank_info.get('country', {})
+                country_name = country_info.get('name', 'No disponible')
                 card_type = bank_info.get('scheme', 'Desconocido').capitalize()
                 
                 # Mapear el tipo de tarjeta a un valor aceptado por PayPal
@@ -141,4 +141,4 @@ if st.button("Verificar Tarjeta"):
         except Exception as e:
             st.error("Error al procesar la tarjeta de crédito.")
     else:
-        st.warning("Por favor, complete todos los campos.")           
+        st.warning("Por favor, complete todos los campos.")     
