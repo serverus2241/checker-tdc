@@ -24,7 +24,7 @@ paypalrestsdk.configure({
     "client_secret": st.secrets["PAYPAL_CLIENT_SECRET"]
 })
 
-st.title("Verificación de Tarjetas de Crédito")
+st.title("Mondongo Verify TDC")
 st.write("Ingrese los detalles de la tarjeta de crédito para verificarla.")
 
 # Formulario para ingresar detalles de la tarjeta
