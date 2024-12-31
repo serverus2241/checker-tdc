@@ -1,7 +1,36 @@
 import streamlit as st
 import paypalrestsdk
+import requests
 
-# Configurar la API de PayPal
+# Función para obtener la información del banco emisor usando el número de tarjeta
+def get_bank_info(card_number):
+    bin_number = card_number[:6]
+    response = requests.get(f"https://lookup.binlist.net/{bin_number}")
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+# Función para mapear los tipos de tarjeta a valores aceptados por PayPal
+def map_card_type(card_type):
+    card_type = card_type.lower()
+    mapping = {
+        "visa": "VISA",
+        "mastercard": "MASTERCARD",
+        "amex": "AMEX",
+        "discover": "DISCOVER",
+        "diners": "DINERS",
+        "maestro": "MAESTRO",
+        "elo": "ELO",
+        "hiper": "HIPER",
+        "switch": "SWITCH",
+        "jcb": "JCB",
+        "hipercard": "HIPERCARD",
+        "cup": "CUP",
+        "rupay": "RUPAY"
+    }
+    return mapping.get(card_type, "null")
+
+# Configurar la API de PayPal usando secretos
 paypalrestsdk.configure({
     "mode": "live",  # Cambia a "live" para producción
     "client_id": st.secrets["PAYPAL_CLIENT_ID"],
@@ -17,15 +46,6 @@ expire_month = st.selectbox("Mes de Vencimiento (MM)", [f"{i:02d}" for i in rang
 current_year = 2024  # Año actual, cámbialo según sea necesario
 expire_year = st.selectbox("Año de Vencimiento (YY)", [f"{i:02d}" for i in range(current_year % 100, (current_year + 10) % 100)])
 cvv = st.text_input("CVV", type="password")
-
-# Nuevos campos para ingresar los detalles del titular de la tarjeta
-first_name = st.text_input("Nombre del Titular")
-last_name = st.text_input("Apellido del Titular")
-address_line1 = st.text_input("Dirección de Facturación")
-city = st.text_input("Ciudad")
-state = st.text_input("Estado/Provincia")
-postal_code = st.text_input("Código Postal")
-country_code = st.text_input("Código del País (por ejemplo, US)")
 
 # Botón para verificar la tarjeta (inicialmente rojo)
 button_style_red = """
@@ -51,63 +71,84 @@ def change_button_to_green():
     st.markdown(button_style_green, unsafe_allow_html=True)
 
 if st.button("Verificar Tarjeta"):
-    if card_number and expire_month and expire_year and cvv and first_name and last_name and address_line1 and city and state and postal_code and country_code:
+    if card_number and expire_month and expire_year and cvv:
         try:
-            # Crear una autorización de pago con PayPal
-            payment = paypalrestsdk.Payment({
-                "intent": "authorize",
-                "payer": {
-                    "payment_method": "credit_card",
-                    "funding_instruments": [{
-                        "credit_card": {
-                            "number": card_number,
-                            "type": "visa",  # Cambia según el tipo de tarjeta
-                            "expire_month": expire_month,
-                            "expire_year": "20" + expire_year,
-                            "cvv2": cvv,
-                            "first_name": first_name,
-                            "last_name": last_name,
-                            "billing_address": {
-                                "line1": address_line1,
-                                "city": city,
-                                "state": state,
-                                "postal_code": postal_code,
-                                "country_code": country_code
-                            }
-                        }
-                    }]
-                },
-                "transactions": [{
-                    "amount": {
-                        "total": "1.00",
-                        "currency": "USD"
-                    },
-                    "description": "Tarjeta de prueba"
-                }]
-            })
-
-            # Intentar realizar la autorización
-            if payment.create():
-                authorization_id = payment.transactions[0].related_resources[0].authorization.id
-                st.success(f"La tarjeta de crédito está aprobada.\n"
-                           f"Tipo: {payment.payer.funding_instruments[0].credit_card.type.upper()}\n"
-                           f"País: {payment.payer.funding_instruments[0].credit_card.billing_address['country_code']}\n"
-                           f"Código Postal: {payment.payer.funding_instruments[0].credit_card.billing_address['postal_code']}\n"
-                           f"Nombre del Titular: {payment.payer.funding_instruments[0].credit_card.first_name} {payment.payer.funding_instruments[0].credit_card.last_name}\n"
-                           f"Fecha de Vencimiento: {payment.payer.funding_instruments[0].credit_card.expire_month}/{payment.payer.funding_instruments[0].credit_card.expire_year}")
-
-                # Anular la autorización para liberar los fondos
-                authorization = paypalrestsdk.Authorization.find(authorization_id)
-                if authorization.void():
-                    st.info("La autorización ha sido anulada y los fondos han sido liberados.")
-                else:
-                    st.warning("No se pudo anular la autorización automáticamente. Por favor, revisa manualmente.")
+            # Obtener información del banco emisor
+            bank_info = get_bank_info(card_number)
+            if bank_info:
+                bank_name = bank_info.get('bank', {}).get('name', 'Desconocido')
+                country = bank_info.get('country', 'Desconocido')
+                card_type = bank_info.get('scheme', 'Desconocido').capitalize()
+                
+                # Mapear el tipo de tarjeta a un valor aceptado por PayPal
+                card_type_paypal = map_card_type(card_type)
+                if card_type_paypal == "null":
+                    st.warning(f"Tipo de tarjeta no soportado: {card_type}")
+                    
             else:
-                error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
-                st.error(f"La tarjeta de crédito está declinada: {error_message}")
-                st.error(f"Detalles del error: {payment.error}")
+                bank_name = 'No disponible'
+                country = 'No disponible'
+                card_type = 'null'
+                card_type_paypal = 'null'
 
-            change_button_to_green()
+            # Mostrar los detalles de la tarjeta antes de la autorización
+            st.write("#### Detalles de la Tarjeta:")
+            st.write(f"- **País**: {country}")
+            st.write(f"- **Tipo**: {card_type if card_type_paypal != 'null' else 'null'}")
+            st.write(f"- **Banco Emisor**: {bank_name}")
+
+            # Intentar realizar la autorización solo si el tipo de tarjeta es soportado
+            if card_type_paypal != "null":
+                payment = paypalrestsdk.Payment({
+                    "intent": "authorize",
+                    "payer": {
+                        "payment_method": "credit_card",
+                        "funding_instruments": [{
+                            "credit_card": {
+                                "number": card_number,
+                                "type": card_type_paypal,  # Usa el tipo de tarjeta mapeado
+                                "expire_month": expire_month,
+                                "expire_year": "20" + expire_year,
+                                "cvv2": cvv,
+                                "first_name": "John",
+                                "last_name": "Doe",
+                                "billing_address": {
+                                    "line1": "123 Main St",
+                                    "city": "San Jose",
+                                    "state": "CA",
+                                    "postal_code": "95131",
+                                    "country_code": country
+                                }
+                            }
+                        }]
+                    },
+                    "transactions": [{
+                        "amount": {
+                            "total": "1.00",
+                            "currency": "USD"
+                        },
+                        "description": "Tarjeta de prueba"
+                    }]
+                })
+
+                # Intentar realizar la autorización
+                if payment.create():
+                    authorization_id = payment.transactions[0].related_resources[0].authorization.id
+                    st.success("La tarjeta de crédito está aprobada.")
+
+                    # Anular la autorización para liberar los fondos
+                    authorization = paypalrestsdk.Authorization.find(authorization_id)
+                    if authorization.void():
+                        st.info("La autorización ha sido anulada y los fondos han sido liberados.")
+                    else:
+                        st.warning("No se pudo anular la autorización automáticamente. Por favor, revisa manualmente.")
+                    
+                    change_button_to_green()
+                else:
+                    error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
+                    st.error(f"La tarjeta de crédito está declinada: {error_message}")
+                    st.error(f"Detalles del error: {payment.error}")
+
         except Exception as e:
             st.error(f"Error al procesar la tarjeta de crédito: {str(e)}")
     else:
