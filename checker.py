@@ -19,12 +19,12 @@ def get_bank_info(card_number):
 
 # Configurar la API de PayPal usando secretos
 paypalrestsdk.configure({
-    "mode": "sandbox",  # Cambia a "live" para producción
+    "mode": "live",  # Cambia a "live" para producción
     "client_id": st.secrets["PAYPAL_CLIENT_ID"],
     "client_secret": st.secrets["PAYPAL_CLIENT_SECRET"]
 })
 
-st.title("Mondongo Verify TDC")
+st.title("Verificación de Tarjetas de Crédito")
 st.write("Ingrese los detalles de la tarjeta de crédito para verificarla.")
 
 # Formulario para ingresar detalles de la tarjeta
@@ -115,6 +115,7 @@ if st.button("Verificar Tarjeta"):
             else:
                 error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
                 st.error(f"La tarjeta de crédito está declinada: {error_message}")
+                st.error(f"Detalles del error: {payment.error}")
 
         except Exception as e:
             st.error(f"Error al procesar la tarjeta de crédito: {str(e)}")
