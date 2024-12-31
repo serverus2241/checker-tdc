@@ -20,8 +20,8 @@ def get_bank_info(card_number):
         return bin_cache[bin_number]
     
     try:
-        # Usar BINDB API gratuita
-        response = requests.get(f"https://api.bindb.com/v1/{bin_number}")
+        # Usar BINList API gratuita
+        response = requests.get(f"https://lookup.binlist.net/{bin_number}")
         if response.status_code == 200:
             data = response.json()
             bin_cache[bin_number] = data  # Guardar en caché
@@ -29,7 +29,7 @@ def get_bank_info(card_number):
         else:
             st.error(f"Error al consultar BIN: {response.status_code}")
     except requests.exceptions.RequestException as e:
-        st.error(f"Error de conexión con BINDB API: {e}")
+        st.error(f"Error de conexión con BINList API: {e}")
     
     return None
 
@@ -65,9 +65,9 @@ if st.button("Verificar Tarjeta"):
             # Obtener información del banco emisor
             bank_info = get_bank_info(card_number)
             if bank_info:
-                bank_name = bank_info.get('bank', 'Desconocido')
-                country = bank_info.get('country_name', 'Desconocido')
-                card_type = bank_info.get('card_type', 'Desconocido').capitalize()
+                bank_name = bank_info.get('bank', {}).get('name', 'Desconocido')
+                country = bank_info.get('country', {}).get('name', 'Desconocido')
+                card_type = bank_info.get('scheme', 'Desconocido').capitalize()
             else:
                 bank_name = 'No disponible'
                 country = 'No disponible'
