@@ -141,4 +141,4 @@ if st.button("Verificar Tarjeta"):
         except Exception as e:
             st.error("Error al procesar la tarjeta de crédito.")
     else:
-        st.warning("Por favor, complete todos los campos.")     
+        st.warning("Por favor, complete todos los campos.")
