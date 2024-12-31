@@ -49,7 +49,7 @@ def map_card_type(card_type):
     return mapping.get(card_type, "null")
 
 # Interfaz de usuario
-st.title("Verificación de Tarjetas de Crédito")
+st.title("Mondongo Verify TDC")
 st.write("Ingrese los detalles de la tarjeta de crédito para verificarla.")
 
 # Formulario para ingresar detalles de la tarjeta
