@@ -1,81 +1,100 @@
+import streamlit as st
 import paypalrestsdk
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Configurar la API de PayPal con las credenciales de producción
+# Configurar la API de PayPal
 paypalrestsdk.configure({
-    "mode": "live",  # Cambia a "sandbox" para pruebas
-    "client_id": "YOUR_LIVE_CLIENT_ID",
-    "client_secret": "YOUR_LIVE_CLIENT_SECRET"
+    "mode": "live",  # Cambia a "live" para producción
+    "client_id": st.secrets["PAYPAL_CLIENT_ID"],
+    "client_secret": st.secrets["PAYPAL_CLIENT_SECRET"]
 })
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("¡Hola! Envíame el número de tarjeta de crédito, fecha de vencimiento (MM/YY) y CVV separados por comas para verificar si está aprobada.")
+st.title("Verificación de Tarjetas de Crédito")
+st.write("Ingrese los detalles de la tarjeta de crédito para verificarla.")
 
-async def check_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        # Obtener los datos de la tarjeta de crédito del mensaje
-        card_info = update.message.text.strip().split(',')
-        if len(card_info) != 3:
-            await update.message.reply_text("Por favor, ingresa los datos en el formato correcto: número de tarjeta, MM/YY, CVV.")
-            return
+# Formulario para ingresar detalles de la tarjeta
+card_number = st.text_input("Número de la Tarjeta de Crédito")
 
-        card_number = card_info[0].strip()
-        expire_month, expire_year = card_info[1].strip().split('/')
-        cvv = card_info[2].strip()
+# Menú desplegable para seleccionar el mes de vencimiento
+expire_month = st.selectbox("Mes de Vencimiento (MM)", [f"{i:02d}" for i in range(1, 13)])
 
-        # Crear una autorización de pago con PayPal
-        payment = paypalrestsdk.Payment({
-            "intent": "authorize",
-            "payer": {
-                "payment_method": "credit_card",
-                "funding_instruments": [{
-                    "credit_card": {
-                        "number": card_number,
-                        "type": "visa",  # Cambia según el tipo de tarjeta
-                        "expire_month": expire_month,
-                        "expire_year": "20" + expire_year,  # Formato completo del año
-                        "cvv2": cvv,
-                        "first_name": "John",
-                        "last_name": "Doe"
-                    }
-                }]
-            },
-            "transactions": [{
-                "amount": {
-                    "total": "1.00",
-                    "currency": "USD"
+# Menú desplegable para seleccionar el año de vencimiento
+current_year = 2024  # Año actual, cámbialo según sea necesario
+expire_year = st.selectbox("Año de Vencimiento (YY)", [f"{i:02d}" for i in range(current_year % 100, (current_year + 10) % 100)])
+
+cvv = st.text_input("CVV", type="password")
+
+# Botón para verificar la tarjeta
+if st.button("Verificar Tarjeta"):
+    if card_number and expire_month and expire_year and cvv:
+        try:
+            # Crear una autorización de pago con PayPal
+            payment = paypalrestsdk.Payment({
+                "intent": "authorize",
+                "payer": {
+                    "payment_method": "credit_card",
+                    "funding_instruments": [{
+                        "credit_card": {
+                            "number": card_number,
+                            "type": "visa",  # Cambia según el tipo de tarjeta
+                            "expire_month": expire_month,
+                            "expire_year": "20" + expire_year,
+                            "cvv2": cvv,
+                            "first_name": "John",
+                            "last_name": "Doe",
+                            "billing_address": {
+                                "line1": "123 Main St",
+                                "city": "San Jose",
+                                "state": "CA",
+                                "postal_code": "95131",
+                                "country_code": "US"
+                            }
+                        }
+                    }]
                 },
-                "description": "Tarjeta de prueba"
-            }]
-        })
+                "transactions": [{
+                    "amount": {
+                        "total": "1.00",
+                        "currency": "USD"
+                    },
+                    "description": "Tarjeta de prueba"
+                }]
+            })
 
-        # Intentar realizar la autorización
-        if payment.create():
-            authorization_id = payment.transactions[0].related_resources[0].authorization.id
-            card_type = payment.payer.funding_instruments[0].credit_card.type
-            country = payment.payer.funding_instruments[0].credit_card.country_code
-            await update.message.reply_text(f"La tarjeta de crédito está aprobada.\nTipo: {card_type.upper()}\nPaís: {country}")
-            
-            # Anular la autorización para liberar los fondos
-            authorization = paypalrestsdk.Authorization.find(authorization_id)
-            if authorization.void():
-                await update.message.reply_text("La autorización ha sido anulada y los fondos han sido liberados.")
+            card_info = payment.payer.funding_instruments[0].credit_card
+            card_type = card_info.type
+            country = card_info.billing_address['country_code']
+            postal_code = card_info.billing_address['postal_code']
+            first_name = card_info.first_name
+            last_name = card_info.last_name
+            expire_month = card_info.expire_month
+            expire_year = card_info.expire_year
+
+            # Intentar realizar la autorización
+            if payment.create():
+                authorization_id = payment.transactions[0].related_resources[0].authorization.id
+
+                st.success(f"La tarjeta de crédito está aprobada.\n"
+                           f"Tipo: {card_type.upper()}\n"
+                           f"País: {country}\n"
+                           f"Código Postal: {postal_code}\n"
+                           f"Nombre del Titular: {first_name} {last_name}\n"
+                           f"Fecha de Vencimiento: {expire_month}/{expire_year}")
+
+                # Anular la autorización para liberar los fondos
+                authorization = paypalrestsdk.Authorization.find(authorization_id)
+                if authorization.void():
+                    st.info("La autorización ha sido anulada y los fondos han sido liberados.")
+                else:
+                    st.warning("No se pudo anular la autorización automáticamente. Por favor, revisa manualmente.")
             else:
-                await update.message.reply_text("No se pudo anular la autorización automáticamente. Por favor, revisa manualmente.")
-        else:
-            await update.message.reply_text(f"La tarjeta de crédito está declinada: {payment.error['message']}")
-    except Exception as e:
-        await update.message.reply_text(f"Error al procesar la tarjeta de crédito: {str(e)}")
-
-def main():
-    # Reemplaza 'YOUR_TELEGRAM_TOKEN' con tu token de Telegram
-    application = ApplicationBuilder().token("YOUR_TELEGRAM_TOKEN").build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_card))
-
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
+                error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
+                st.error(f"La tarjeta de crédito está declinada: {error_message}\n"
+                         f"Tipo: {card_type.upper()}\n"
+                         f"País: {country}\n"
+                         f"Código Postal: {postal_code}\n"
+                         f"Nombre del Titular: {first_name} {last_name}\n"
+                         f"Fecha de Vencimiento: {expire_month}/{expire_year}")
+        except Exception as e:
+            st.error(f"Error al procesar la tarjeta de crédito: {str(e)}")
+    else:
+        st.warning("Por favor, complete todos los campos.")
