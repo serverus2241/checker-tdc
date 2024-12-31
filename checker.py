@@ -145,8 +145,11 @@ if st.button("Verificar Tarjeta"):
                     
                     change_button_to_green()
                 else:
-                    st.error(f"La tarjeta de crédito está declinada.")
+                    error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
+                    st.error(f"La tarjeta de crédito está declinada: {error_message}")
+                    st.error(f"Detalles del error: {payment.error}")
+
         except Exception as e:
-            st.error("Error al procesar la tarjeta de crédito.")
+            st.error(f"Error al procesar la tarjeta de crédito: {str(e)}")
     else:
         st.warning("Por favor, complete todos los campos.")
