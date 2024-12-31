@@ -20,34 +20,22 @@ def get_bank_info(card_number):
 # Función para mapear los tipos de tarjeta a valores aceptados por PayPal
 def map_card_type(card_type):
     card_type = card_type.lower()
-    if card_type == "visa":
-        return "VISA"
-    elif card_type == "mastercard":
-        return "MASTERCARD"
-    elif card_type == "amex":
-        return "AMEX"
-    elif card_type == "discover":
-        return "DISCOVER"
-    elif card_type == "diners":
-        return "DINERS"
-    elif card_type == "maestro":
-        return "MAESTRO"
-    elif card_type == "elo":
-        return "ELO"
-    elif card_type == "hiper":
-        return "HIPER"
-    elif card_type == "switch":
-        return "SWITCH"
-    elif card_type == "jcb":
-        return "JCB"
-    elif card_type == "hipercard":
-        return "HIPERCARD"
-    elif card_type == "cup":
-        return "CUP"
-    elif card_type == "rupay":
-        return "RUPAY"
-    else:
-        return "UNKNOWN"
+    mapping = {
+        "visa": "VISA",
+        "mastercard": "MASTERCARD",
+        "amex": "AMEX",
+        "discover": "DISCOVER",
+        "diners": "DINERS",
+        "maestro": "MAESTRO",
+        "elo": "ELO",
+        "hiper": "HIPER",
+        "switch": "SWITCH",
+        "jcb": "JCB",
+        "hipercard": "HIPERCARD",
+        "cup": "CUP",
+        "rupay": "RUPAY"
+    }
+    return mapping.get(card_type, "UNKNOWN")
 
 # Configurar la API de PayPal usando secretos
 paypalrestsdk.configure({
@@ -101,61 +89,65 @@ if st.button("Verificar Tarjeta"):
                 country_flag = ''
                 card_type_paypal = 'UNKNOWN'
 
-            # Crear una autorización de pago con PayPal
-            payment = paypalrestsdk.Payment({
-                "intent": "authorize",
-                "payer": {
-                    "payment_method": "credit_card",
-                    "funding_instruments": [{
-                        "credit_card": {
-                            "number": card_number,
-                            "type": card_type_paypal,  # Usa el tipo de tarjeta mapeado
-                            "expire_month": expire_month,
-                            "expire_year": "20" + expire_year,
-                            "cvv2": cvv,
-                            "first_name": "John",
-                            "last_name": "Doe",
-                            "billing_address": {
-                                "line1": "123 Main St",
-                                "city": "San Jose",
-                                "state": "CA",
-                                "postal_code": "95131",
-                                "country_code": country
-                            }
-                        }
-                    }]
-                },
-                "transactions": [{
-                    "amount": {
-                        "total": "1.00",
-                        "currency": "USD"
-                    },
-                    "description": "Tarjeta de prueba"
-                }]
-            })
-
-            # Intentar realizar la autorización
-            if payment.create():
-                authorization_id = payment.transactions[0].related_resources[0].authorization.id
-                st.success("La tarjeta de crédito está aprobada.")
-                st.write("#### Detalles de la Tarjeta:")
-                st.write(f"- **Número de Tarjeta**: {card_number}")
-                st.write(f"- **Fecha de Vencimiento**: {expire_month}/{expire_year}")
-                st.write(f"- **CVV**: {cvv}")
-                st.write(f"- **País**: {country} {country_flag}")
-                st.write(f"- **Banco Emisor**: {bank_name}")
-                st.write(f"- **Tipo**: {card_type}")
-
-                # Anular la autorización para liberar los fondos
-                authorization = paypalrestsdk.Authorization.find(authorization_id)
-                if authorization.void():
-                    st.info("La autorización ha sido anulada y los fondos han sido liberados.")
-                else:
-                    st.warning("No se pudo anular la autorización automáticamente. Por favor, revisa manualmente.")
+            # Verificar si el tipo de tarjeta es soportado por PayPal
+            if card_type_paypal == "UNKNOWN":
+                st.error(f"Tipo de tarjeta no soportado: {card_type}")
             else:
-                error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
-                st.error(f"La tarjeta de crédito está declinada: {error_message}")
-                st.error(f"Detalles del error: {payment.error}")
+                # Crear una autorización de pago con PayPal
+                payment = paypalrestsdk.Payment({
+                    "intent": "authorize",
+                    "payer": {
+                        "payment_method": "credit_card",
+                        "funding_instruments": [{
+                            "credit_card": {
+                                "number": card_number,
+                                "type": card_type_paypal,  # Usa el tipo de tarjeta mapeado
+                                "expire_month": expire_month,
+                                "expire_year": "20" + expire_year,
+                                "cvv2": cvv,
+                                "first_name": "John",
+                                "last_name": "Doe",
+                                "billing_address": {
+                                    "line1": "123 Main St",
+                                    "city": "San Jose",
+                                    "state": "CA",
+                                    "postal_code": "95131",
+                                    "country_code": country
+                                }
+                            }
+                        }]
+                    },
+                    "transactions": [{
+                        "amount": {
+                            "total": "1.00",
+                            "currency": "USD"
+                        },
+                        "description": "Tarjeta de prueba"
+                    }]
+                })
+
+                # Intentar realizar la autorización
+                if payment.create():
+                    authorization_id = payment.transactions[0].related_resources[0].authorization.id
+                    st.success("La tarjeta de crédito está aprobada.")
+                    st.write("#### Detalles de la Tarjeta:")
+                    st.write(f"- **Número de Tarjeta**: {card_number}")
+                    st.write(f"- **Fecha de Vencimiento**: {expire_month}/{expire_year}")
+                    st.write(f"- **CVV**: {cvv}")
+                    st.write(f"- **País**: {country} {country_flag}")
+                    st.write(f"- **Banco Emisor**: {bank_name}")
+                    st.write(f"- **Tipo**: {card_type}")
+
+                    # Anular la autorización para liberar los fondos
+                    authorization = paypalrestsdk.Authorization.find(authorization_id)
+                    if authorization.void():
+                        st.info("La autorización ha sido anulada y los fondos han sido liberados.")
+                    else:
+                        st.warning("No se pudo anular la autorización automáticamente. Por favor, revisa manualmente.")
+                else:
+                    error_message = payment.error['message'] if 'message' in payment.error else 'Error desconocido'
+                    st.error(f"La tarjeta de crédito está declinada: {error_message}")
+                    st.error(f"Detalles del error: {payment.error}")
 
         except Exception as e:
             st.error(f"Error al procesar la tarjeta de crédito: {str(e)}")
