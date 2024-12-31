@@ -11,7 +11,7 @@ def get_country_flag(country_code):
 
 # Configurar la API de PayPal
 paypalrestsdk.configure({
-    "mode": "sandbox",  # Cambia a "live" para producción
+    "mode": "live",  # Cambia a "live" para producción
     "client_id": st.secrets["PAYPAL_CLIENT_ID"],
     "client_secret": st.secrets["PAYPAL_CLIENT_SECRET"]
 })
