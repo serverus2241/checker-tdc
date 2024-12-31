@@ -17,6 +17,38 @@ def get_bank_info(card_number):
         return response.json()
     return None
 
+# Función para mapear los tipos de tarjeta a valores aceptados por PayPal
+def map_card_type(card_type):
+    card_type = card_type.lower()
+    if card_type == "visa":
+        return "VISA"
+    elif card_type == "mastercard":
+        return "MASTERCARD"
+    elif card_type == "amex":
+        return "AMEX"
+    elif card_type == "discover":
+        return "DISCOVER"
+    elif card_type == "diners":
+        return "DINERS"
+    elif card_type == "maestro":
+        return "MAESTRO"
+    elif card_type == "elo":
+        return "ELO"
+    elif card_type == "hiper":
+        return "HIPER"
+    elif card_type == "switch":
+        return "SWITCH"
+    elif card_type == "jcb":
+        return "JCB"
+    elif card_type == "hipercard":
+        return "HIPERCARD"
+    elif card_type == "cup":
+        return "CUP"
+    elif card_type == "rupay":
+        return "RUPAY"
+    else:
+        return "UNKNOWN"
+
 # Configurar la API de PayPal usando secretos
 paypalrestsdk.configure({
     "mode": "live",  # Cambia a "live" para producción
@@ -55,11 +87,19 @@ if st.button("Verificar Tarjeta"):
                 country = bank_info.get('country', 'Desconocido')
                 card_type = bank_info.get('scheme', 'Desconocido').capitalize()
                 country_flag = get_country_flag(country)
+                
+                # Mapear el tipo de tarjeta a un valor aceptado por PayPal
+                card_type_paypal = map_card_type(card_type)
+                
+                if card_type_paypal == "UNKNOWN":
+                    raise ValueError(f"Tipo de tarjeta no soportado: {card_type}")
+                    
             else:
                 bank_name = 'No disponible'
                 country = 'No disponible'
                 card_type = 'Desconocido'
                 country_flag = ''
+                card_type_paypal = 'UNKNOWN'
 
             # Crear una autorización de pago con PayPal
             payment = paypalrestsdk.Payment({
@@ -69,7 +109,7 @@ if st.button("Verificar Tarjeta"):
                     "funding_instruments": [{
                         "credit_card": {
                             "number": card_number,
-                            "type": card_type.lower(),  # Usa el tipo de tarjeta obtenido
+                            "type": card_type_paypal,  # Usa el tipo de tarjeta mapeado
                             "expire_month": expire_month,
                             "expire_year": "20" + expire_year,
                             "cvv2": cvv,
