@@ -78,7 +78,6 @@ if st.button("Verificar Tarjeta"):
             if bank_info:
                 bank_name = bank_info.get('bank', {}).get('name', 'Desconocido')
                 country = bank_info.get('country', 'Desconocido')
-                country_name = country.get('name', 'Desconocido')
                 card_type = bank_info.get('scheme', 'Desconocido').capitalize()
                 
                 # Mapear el tipo de tarjeta a un valor aceptado por PayPal
@@ -88,13 +87,13 @@ if st.button("Verificar Tarjeta"):
                     
             else:
                 bank_name = 'No disponible'
-                country_name = 'No disponible'
+                country = 'No disponible'
                 card_type = 'null'
                 card_type_paypal = 'null'
 
             # Mostrar los detalles de la tarjeta antes de la autorización
             st.write("#### Detalles de la Tarjeta:")
-            st.write(f"- **País**: {country_name}")
+            st.write(f"- **País**: {country}")
             st.write(f"- **Tipo**: {card_type if card_type_paypal != 'null' else 'null'}")
             st.write(f"- **Banco Emisor**: {bank_name}")
 
@@ -118,7 +117,7 @@ if st.button("Verificar Tarjeta"):
                                     "city": "San Jose",
                                     "state": "CA",
                                     "postal_code": "95131",
-                                    "country_code": country.get('alpha2', 'US')
+                                    "country_code": country
                                 }
                             }
                         }]
